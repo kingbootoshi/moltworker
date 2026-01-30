@@ -105,6 +105,17 @@ if [ -d "$BACKUP_DIR/skills" ] && [ "$(ls -A $BACKUP_DIR/skills 2>/dev/null)" ];
     fi
 fi
 
+# Restore workspace from R2 backup if available (only if R2 is newer)
+WORKSPACE_DIR="/root/clawd"
+if [ -d "$BACKUP_DIR/clawd" ] && [ "$(ls -A $BACKUP_DIR/clawd 2>/dev/null)" ]; then
+    if should_restore_from_r2; then
+        echo "Restoring workspace from $BACKUP_DIR/clawd..."
+        mkdir -p "$WORKSPACE_DIR"
+        cp -a "$BACKUP_DIR/clawd/." "$WORKSPACE_DIR/"
+        echo "Restored workspace from R2 backup"
+    fi
+fi
+
 # If config file still doesn't exist, create from template
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "No existing config found, initializing from template..."
@@ -263,6 +274,17 @@ if (isOpenAI) {
 } else {
     // Default to Anthropic without custom base URL (uses built-in pi-ai catalog)
     config.agents.defaults.model.primary = 'anthropic/claude-opus-4-5';
+}
+
+// PRIMARY_MODEL override - allows setting any model via OpenRouter or other providers
+if (process.env.PRIMARY_MODEL) {
+    const model = process.env.PRIMARY_MODEL;
+    console.log('Overriding primary model to:', model);
+    config.agents.defaults.models = config.agents.defaults.models || {};
+    // Auto-add to allowlist with a simple alias derived from model name
+    const alias = model.split('/').pop() || model;
+    config.agents.defaults.models[model] = { alias: alias };
+    config.agents.defaults.model.primary = model;
 }
 
 // Write updated config
